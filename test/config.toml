@@ -5,8 +5,8 @@ inputs_dir = "./test/data/inputs"
 outputs_dir = "./test/data/outputs"
 
 [domain]
-number_of_years = 100
-grid_shape = [100, 100]
+number_of_years = 100 # time
+grid_shape = [100, 100] # [y, x]
 
 [files]
 air_temperature_file = "air_temperature.nc"
