@@ -1,0 +1,27 @@
+experiment = "test"
+
+[directories]
+inputs_dir = "./test/data/inputs"
+outputs_dir = "./test/data/outputs"
+
+[domain]
+number_of_years = 100
+grid_shape = [100, 100]
+
+[files]
+air_temperature_file = "air_temperature.nc"
+temperature_amplitude_file = "temperature_amplitude.nc"
+snow_thickness_file = "snow_thickness.nc"
+snow_density_file = "snow_density.nc"
+soil_moisture_file = "soil_moisture.nc"
+frozen_vegetation_height_file = "frozen_vegetation_height.nc"
+thawed_vegetation_height_file = "thawed_vegetation_height.nc"
+frozen_vegetation_diffusivity_file = "frozen_vegetation_diffusivity.nc"
+thawed_vegeation_diffusivity_file = "thawed_vegetation_diffusivity.nc"
+soil_texture_file = "soil_texture.nc"
+
+[constants]
+water_density = 1000 # kg m^-3
+air_density = 0
+snow_heat_capacity = 0
+air_heat_capacity = 0
