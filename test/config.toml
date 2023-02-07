@@ -1,8 +1,8 @@
 experiment = "test"
 
 [directories]
-inputs_dir = "./test/data/inputs"
-outputs_dir = "./test/data/outputs"
+inputs_dir = "./test/data/inputs/"
+outputs_dir = "./test/data/outputs/"
 
 [domain]
 number_of_years = 100 # time
@@ -13,12 +13,15 @@ air_temperature_file = "air_temperature.nc"
 temperature_amplitude_file = "temperature_amplitude.nc"
 snow_thickness_file = "snow_thickness.nc"
 snow_density_file = "snow_density.nc"
-soil_moisture_file = "soil_moisture.nc"
+soil_water_content_file = "soil_water_content.nc"
 frozen_vegetation_height_file = "frozen_vegetation_height.nc"
 thawed_vegetation_height_file = "thawed_vegetation_height.nc"
 frozen_vegetation_diffusivity_file = "frozen_vegetation_diffusivity.nc"
 thawed_vegeation_diffusivity_file = "thawed_vegetation_diffusivity.nc"
-soil_texture_file = "soil_texture.nc"
+# sand_fraction_file = "sand_fraction.nc"
+# silt_fraction_file = "silt_fraction.nc"
+# clay_fraction_file = "clay_fraction.nc"
+# peat_fraction_file = "peat_fraction.nc"
 
 [constants]
 water_density = 1000 # kg m^-3

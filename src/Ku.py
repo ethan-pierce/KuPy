@@ -37,7 +37,7 @@ class Ku_model:
             raise ValueError("No input files to read: did you call read_config() first?")
 
         for var, file in self.input_files.items():
-            data = xr.open_dataarray(file)
+            data = xr.open_dataarray(self.inputs_dir + file)
 
             if data.shape == (self.number_of_years, self.grid_shape[0], self.grid_shape[1]):
                 pass
