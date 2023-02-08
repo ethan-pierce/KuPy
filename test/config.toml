@@ -20,7 +20,7 @@ frozen_vegetation_diffusivity_file = "frozen_vegetation_diffusivity.nc"
 thawed_vegetation_diffusivity_file = "thawed_vegetation_diffusivity.nc"
 
 [soils.sand]
-fraction = 0.25
+scalar_fraction = 0.25
 nc_file = '' 
 bulk_density = 1300
 heat_capacity = 1500
@@ -30,7 +30,7 @@ conductivity_frozen_dry = 1.25
 conductivity_frozen_wet = 2.65
 
 [soils.silt]
-fraction = 0.25
+scalar_fraction = 0.25
 nc_file = ''
 bulk_density = 1400
 heat_capacity = 1300
@@ -40,7 +40,7 @@ conductivity_frozen_dry = 1.25
 conductivity_frozen_wet = 2.4
 
 [soils.clay]
-fraction = 0.25
+scalar_fraction = 0.25
 nc_file = ''
 bulk_density = 1500
 heat_capacity = 2200
@@ -50,7 +50,7 @@ conductivity_frozen_dry = 1.15
 conductivity_frozen_wet = 2.0
 
 [soils.peat]
-fraction = 0.25
+scalar_fraction = 0.25
 nc_file = ''
 bulk_density = 150
 heat_capacity = 200

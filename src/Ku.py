@@ -12,6 +12,10 @@ class Ku_model:
         self.grid_shape = [0, 0]
         self.input_files = {}
         self.constants = {}
+
+        # update_soil_heat_capacity()
+        self.bulk_thawed_heat_capacity = 0
+        self.bulk_frozen_heat_capacity = 0
     
 ##############
 # Initialize #
@@ -51,9 +55,9 @@ class Ku_model:
                 data = self.broadcast(data)
 
             else:
-                data = xr.full_like(self.air_temperature, props['fraction'])
+                data = xr.full_like(self.air_temperature, props['scalar_fraction'])
 
-            self.soils[soil]['values'] = data
+            self.soils[soil]['fraction'] = data
 
     def broadcast(self, data: xr.DataArray) -> xr.DataArray:
         if data.shape == (self.number_of_years, self.grid_shape[0], self.grid_shape[1]):
@@ -83,8 +87,19 @@ class Ku_model:
 # Update #
 ##########
 
-    def update_soil_heat_capacity(self):
-        pass
+    def update_soil_heat_capacity(self, t: int):
+        total_soil_fraction = np.add.reduce([props['fraction'][t,:,:] for soil, props in self.soils.items()])
+        weighted_heat_capacity = np.add.reduce([props['heat_capacity'] * props['fraction'][t,:,:] / total_soil_fraction
+                                                for soil, props in self.soils.items()])
+        weighted_bulk_density = np.add.reduce([props['bulk_density'] * props['fraction'][t,:,:] / total_soil_fraction
+                                               for soil, props in self.soils.items()])
+        
+        # Anisimov et al. (1997)
+        self.bulk_thawed_heat_capacity = (weighted_heat_capacity * weighted_bulk_density + 
+                                          4190.0 * self.soil_water_content.values[t,:,:])
+
+        self.bulk_frozen_heat_capacity = (weighted_heat_capacity * weighted_bulk_density +
+                                          2025.0 * self.soil_water_content.values[t,:,:])
 
     def update_soil_thermal_conductivity(self):
         pass

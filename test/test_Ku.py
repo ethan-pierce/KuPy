@@ -1,4 +1,6 @@
 import pytest
+from numpy.testing import assert_approx_equal
+
 from src.Ku import Ku_model
 
 def test_always_passes():
@@ -31,4 +33,19 @@ class TestReadInputs:
         Ku.read_input_files()
 
         assert Ku.snow_thickness.shape == (100, 100, 100)
-        assert Ku.soils['sand']['values'].mean() == 0.25
+        assert Ku.soils['sand']['fraction'].mean() == 0.25
+
+@pytest.fixture
+def Kutest():
+    K = Ku_model()
+    K.read_config("./test/config.toml")
+    K.read_input_files()
+    return K
+
+class TestUpdateSoilHeatCapacity:
+
+    def test_bulk_thawed_heat_capacity(self, Kutest):
+        Kutest.update_soil_heat_capacity(0)
+
+        assert_approx_equal(Kutest.bulk_thawed_heat_capacity[0, 0], 1.415e6, significant=4)
+        assert_approx_equal(Kutest.bulk_frozen_heat_capacity[0, 0], 1.414e6, significant=4)
