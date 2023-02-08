@@ -17,6 +17,7 @@ def test_read_config(Ku):
     assert Ku.number_of_years == 100
     assert Ku.grid_shape == [100, 100]
     assert len(Ku.input_files) > 0
+    assert Ku.soils['sand']['heat_capacity'] == 1500
     assert len(Ku.constants) > 0
 
 class TestReadInputs:
@@ -28,3 +29,6 @@ class TestReadInputs:
     def test_read_inputs(self, Ku):
         Ku.read_config("./test/config.toml")
         Ku.read_input_files()
+
+        assert Ku.snow_thickness.shape == (100, 100, 100)
+        assert Ku.soils['sand']['values'].mean() == 0.25

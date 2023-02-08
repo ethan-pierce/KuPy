@@ -18,7 +18,6 @@ class Ku_model:
 ##############
 
     def read_config(self, config_file: str):
-
         with open(config_file, "rb") as file:
             config = tomli.load(file)
 
@@ -30,35 +29,55 @@ class Ku_model:
         self.grid_shape = config['domain']['grid_shape']
 
         self.input_files = {var: ncfile for var, ncfile in config['files'].items()}
+        self.soils = {soil: props for soil, props in config['soils'].items()}
         self.constants = {var: val for var, val in config['constants'].items()}
 
     def read_input_files(self):
         if len(self.input_files) == 0:
             raise ValueError("No input files to read: did you call read_config() first?")
 
-        for var, file in self.input_files.items():
+        for key, file in self.input_files.items():
+            var = key.replace('_file', '')
             data = xr.open_dataarray(self.inputs_dir + file)
 
-            if data.shape == (self.number_of_years, self.grid_shape[0], self.grid_shape[1]):
-                pass
+            data = self.broadcast(data)
 
-            elif data.shape == (self.grid_shape[0], self.grid_shape[1]):
-                data = data.expand_dims({"time": self.number_of_years}, axis = 0)
+            setattr(self, var, data)
 
-            elif data.shape == (self.number_of_years,):
-                data = data.expand_dims({"x": self.grid_shape[1], "y": self.grid_shape[0]}, axis = [1, 2])
+        for soil, props in self.soils.items():
+            if len(props['nc_file']) > 0:
+                data = xr.open_dataarray(prop['nc_file'])
 
-            elif data.shape == (1,):
-                dim_name = str(data.dims[0])
-                data = data.expand_dims({"time": self.number_of_years, 
-                                         "x": self.grid_shape[1], 
-                                         "y": self.grid_shape[0]},
-                                         axis = [0, 1, 2])
-                data = data.squeeze(dim_name)
+                data = self.broadcast(data)
 
             else:
-                raise ValueError(var + " data cannot be broadcast to shape " + 
-                                 str((self.number_of_years, self.grid_shape[0], self.grid_shape[1])))
+                data = xr.full_like(self.air_temperature, props['fraction'])
+
+            self.soils[soil]['values'] = data
+
+    def broadcast(self, data: xr.DataArray) -> xr.DataArray:
+        if data.shape == (self.number_of_years, self.grid_shape[0], self.grid_shape[1]):
+            pass
+
+        elif data.shape == (self.grid_shape[0], self.grid_shape[1]):
+            data = data.expand_dims({"time": self.number_of_years}, axis = 0)
+
+        elif data.shape == (self.number_of_years,):
+            data = data.expand_dims({"x": self.grid_shape[1], "y": self.grid_shape[0]}, axis = [1, 2])
+
+        elif data.shape == (1,):
+            dim_name = str(data.dims[0])
+            data = data.expand_dims({"time": self.number_of_years, 
+                                        "x": self.grid_shape[1], 
+                                        "y": self.grid_shape[0]},
+                                        axis = [0, 1, 2])
+            data = data.squeeze(dim_name)
+
+        else:
+            raise ValueError(var + " data cannot be broadcast to shape " + 
+                                str((self.number_of_years, self.grid_shape[0], self.grid_shape[1])))
+
+        return data
 
 ##########
 # Update #
