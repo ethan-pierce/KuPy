@@ -60,7 +60,6 @@ conductivity_frozen_dry = 0.32
 conductivity_frozen_wet = 0.8
 
 [constants]
-water_density = 1000 # kg m^-3
-air_density = 0
-snow_heat_capacity = 0
-air_heat_capacity = 0
+uwc = 0.05
+snow_heat_capacity = 2090
+sec_per_a = 31556926

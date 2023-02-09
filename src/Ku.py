@@ -14,9 +14,34 @@ class Ku_model:
         self.constants = {}
 
         # update_soil_heat_capacity()
-        self.bulk_thawed_heat_capacity = 0
-        self.bulk_frozen_heat_capacity = 0
+        self.bulk_thawed_heat_capacity = None
+        self.bulk_frozen_heat_capacity = None
+
+        # update_soil_thermal_conductivity()
+        self.bulk_thawed_conductivity = None
+        self.bulk_frozen_conductivity = None
     
+        # update_snow_thermal_properties()
+        self.snow_thermal_conductivity = None
+        self.snow_thermal_diffusivity = None
+
+        # update_season_durations()
+        self.length_of_cold_season = None 
+        self.length_of_warm_season = None 
+
+        # update_permafrost_temperature()
+        self.snow_insulation = None
+        self.snow_damping = None
+        self.temperature_at_vegetation = None
+        self.amplitude_at_vegetation = None
+        self.winter_vegetation_effect = None
+        self.summer_vegetation_effect = None
+        self.vegetation_insulation = None
+        self.vegetation_damping = None
+        self.ground_surface_temperature = None
+        self.ground_surface_amplitude = None 
+        self.permafrost_temperature = None
+
 ##############
 # Initialize #
 ##############
@@ -96,19 +121,83 @@ class Ku_model:
         
         # Anisimov et al. (1997)
         self.bulk_thawed_heat_capacity = (weighted_heat_capacity * weighted_bulk_density + 
-                                          4190.0 * self.soil_water_content.values[t,:,:])
+                                          4190.0 * self.soil_water_content[t,:,:])
 
         self.bulk_frozen_heat_capacity = (weighted_heat_capacity * weighted_bulk_density +
-                                          2025.0 * self.soil_water_content.values[t,:,:])
+                                          2025.0 * self.soil_water_content[t,:,:])
 
-    def update_soil_thermal_conductivity(self):
-        pass
+    def update_soil_thermal_conductivity(self, t: int):
+        total_soil_fraction = np.add.reduce([props['fraction'][t,:,:] for soil, props in self.soils.items()])
+        
+        dry_thawed_conductivity = np.multiply.reduce(
+            [props['conductivity_thawed_dry']**(props['fraction'][t,:,:] / total_soil_fraction)
+             for soil, props in self.soils.items()]
+        )
 
-    def update_snow_thermal_properties(self):
-        pass
+        self.bulk_thawed_conductivity = (
+            dry_thawed_conductivity**(1 - self.soil_water_content[t,:,:]) * 0.54**(self.soil_water_content[t,:,:])
+        )
 
-    def update_temperature(self):
-        pass
+        dry_frozen_conductivity = np.multiply.reduce(
+            [props['conductivity_frozen_dry']**(props['fraction'][t,:,:] / total_soil_fraction)
+             for soil, props in self.soils.items()]
+        )
+
+        self.bulk_frozen_conductivity = (
+            dry_frozen_conductivity**(1 - self.soil_water_content[t,:,:]) * 
+            2.35**(self.soil_water_content[t,:,:] - self.constants['uwc']) *
+            0.54**(self.constants['uwc'])
+        )
+
+    def update_snow_thermal_properties(self, t: int):
+
+        # Sturm et al. (1997), eq. (4)
+        self.snow_thermal_conductivity = (
+            0.138 -
+            1.01 * (self.snow_density[t,:,:] / 1000) +
+            3.233 * (self.snow_density[t,:,:] / 1000)**2
+        )
+
+        self.snow_thermal_diffusivity = (
+            self.snow_thermal_conductivity / (self.snow_density[t,:,:] * self.constants['snow_heat_capacity'])
+        )
+
+    def update_season_durations(self, t: int):
+        self.length_of_cold_season = self.constants['sec_per_a'] * (
+            0.5 - (1.0 / np.pi) * np.arcsin(self.air_temperature[t,:,:] / self.temperature_amplitude[t,:,:])
+        )
+        self.length_of_warm_season = self.constants['sec_per_a'] - self.length_of_cold_season
+
+    def update_permafrost_temperature(self, t: int):
+
+        # Anisimov et al. (1997), eq. (7)
+        inner_eq7 = np.exp(
+            -1.0 * self.snow_thickness[t,:,:] * 
+            np.sqrt(np.pi / (self.constants['sec_per_a'] * self.snow_thermal_diffusivity))
+        )
+        self.snow_insulation = self.temperature_amplitude[t,:,:] * (1 - inner_eq7)
+        self.snow_damping = self.snow_insulation * 2.0 / np.pi
+        self.temperature_at_vegetation = self.air_temperature[t,:,:] + self.snow_insulation
+        self.amplitude_at_vegetation = self.temperature_amplitude[t,:,:] - self.snow_damping
+
+        # Anisimov et al. (1997), eq. (10)
+        inner_eq10 = (
+            1.0 - np.exp(
+                -1.0 * self.frozen_vegetation_height[t,:,:] *
+                np.sqrt(np.pi / (2 * self.frozen_vegetation_diffusivity[t,:,:] * self.length_of_cold_season[:,:]))
+            )
+        )
+        self.winter_vegetation_effect = (self.amplitude_at_vegetation - self.temperature_at_vegetation) * inner_eq10
+
+        # Anisimov et al. (1997), eq. (11)
+        inner_eq11 = (
+            1.0 - np.exp(
+                -1.0 * self.thawed_vegetation_height[t,:,:] *
+                np.sqrt(np.pi / (2 * self.thawed_vegetation_diffusivity[t,:,:] * self.length_of_warm_season[:,:]))
+            )
+        )
+        self.summer_vegetation_effect = (self.amplitude_at_vegetation + self.temperature_at_vegetation) * inner_eq11
+        
 
     def update_active_layer(self):
         pass

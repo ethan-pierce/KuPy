@@ -42,7 +42,7 @@ def Kutest():
     K.read_input_files()
     return K
 
-class TestUpdateSoilProperties:
+class TestUpdatePhysicalProperties:
 
     def test_bulk_heat_capacity(self, Kutest):
         Kutest.update_soil_heat_capacity(0)
@@ -50,5 +50,43 @@ class TestUpdateSoilProperties:
         assert_approx_equal(Kutest.bulk_thawed_heat_capacity[0, 0], 1.415e6, significant=4)
         assert_approx_equal(Kutest.bulk_frozen_heat_capacity[0, 0], 1.414e6, significant=4)
 
-    def test_bulk_thermal_diffusivity():
-        pass
+    def test_bulk_thermal_conductivity(self, Kutest):
+        Kutest.update_soil_thermal_conductivity(0)
+
+        assert_approx_equal(Kutest.bulk_thawed_conductivity[0, 0], 0.5880, significant=4)
+        assert_approx_equal(Kutest.bulk_frozen_conductivity[0, 0], 1.0970, significant=4)
+
+    def test_update_snow_thermal_properties(self, Kutest):
+        Kutest.update_snow_thermal_properties(0)
+
+        assert_approx_equal(Kutest.snow_thermal_conductivity[0, 0], 0.08182, significant=4)
+
+class TestUpdatePermafrostTemperature:
+
+    def test_update_season_durations(self, Kutest):
+        Kutest.update_season_durations(0)
+
+        assert_approx_equal(Kutest.length_of_cold_season[0, 0], 1.951e7, significant=4)
+        assert_approx_equal(Kutest.length_of_warm_season[0, 0], 1.205e7, significant=4)
+
+    def test_update_snow_and_veg_insulation(self, Kutest):
+        Kutest.update_snow_thermal_properties(0)
+        Kutest.update_season_durations(0)
+        Kutest.update_permafrost_temperature(0)
+
+        assert_approx_equal(Kutest.snow_insulation[0, 0], 5.610, significant=4)
+        assert_approx_equal(Kutest.snow_damping[0, 0], 3.571, significant=4)
+        assert_approx_equal(Kutest.temperature_at_vegetation[0, 0], -1.297, significant=4)
+        assert_approx_equal(Kutest.amplitude_at_vegetation[0, 0], 15.48, significant=4)
+
+    def test_update_vegetation_effects(self, Kutest):
+        Kutest.update_snow_thermal_properties(0)
+        Kutest.update_season_durations(0)
+        Kutest.update_permafrost_temperature(0)
+
+        print(Kutest.thawed_vegetation_height[0])
+        print(Kutest.frozen_vegetation_height[0])
+
+        assert_approx_equal(Kutest.winter_vegetation_effect[0, 0], 0.0, significant=4)
+        assert_approx_equal(Kutest.summer_vegetation_effect[0, 0], 0.0, significant=4)
+
