@@ -42,10 +42,13 @@ def Kutest():
     K.read_input_files()
     return K
 
-class TestUpdateSoilHeatCapacity:
+class TestUpdateSoilProperties:
 
-    def test_bulk_thawed_heat_capacity(self, Kutest):
+    def test_bulk_heat_capacity(self, Kutest):
         Kutest.update_soil_heat_capacity(0)
 
         assert_approx_equal(Kutest.bulk_thawed_heat_capacity[0, 0], 1.415e6, significant=4)
         assert_approx_equal(Kutest.bulk_frozen_heat_capacity[0, 0], 1.414e6, significant=4)
+
+    def test_bulk_thermal_diffusivity():
+        pass
