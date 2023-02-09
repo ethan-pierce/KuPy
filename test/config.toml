@@ -63,3 +63,4 @@ conductivity_frozen_wet = 0.8
 uwc = 0.05
 snow_heat_capacity = 2090
 sec_per_a = 31556926
+latent_heat = 3.34e5

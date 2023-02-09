@@ -43,6 +43,13 @@ class Ku_model:
 
         # update_permafrost_temperature()
         self.permafrost_temperature = None
+        self.soil_conductivity = None
+        self.soil_heat_capacity = None 
+
+        # update_active_layer()
+        self.active_layer_thickness = None 
+        self.critical_depth = None
+        self.permafrost_amplitude = None 
 
 ##############
 # Initialize #
@@ -214,10 +221,79 @@ class Ku_model:
         self.ground_surface_amplitude = self.amplitude_at_vegetation - self.vegetation_damping
 
     def update_permafrost_temperature(self, t: int):
-        pass
+        
+        # Anisimov et al. (1997), eq. (14)
+        first_term_eq14 = (
+            0.5 * self.ground_surface_temperature[:, :] * 
+            (self.bulk_frozen_conductivity + self.bulk_thawed_conductivity)
+        )
+        second_term_eq14 = (
+            self.ground_surface_amplitude * (self.bulk_thawed_conductivity - self.bulk_frozen_conductivity) / np.pi
+        )
+        inner_eq14 = (
+            self.ground_surface_temperature / self.ground_surface_amplitude *
+            np.arcsin(self.ground_surface_temperature / self.ground_surface_amplitude) +
+            np.sqrt(1.0 - (np.pi**2 / self.ground_surface_amplitude**2))
+        )
+        numerator_eq14 = first_term_eq14 + second_term_eq14 * inner_eq14
 
-    def update_active_layer(self):
-        pass
+        self.soil_conductivity = np.where(
+            numerator_eq14 > 0.0, 
+            self.bulk_thawed_conductivity, 
+            self.bulk_frozen_conductivity
+        )
+
+        self.soil_heat_capacity = np.where(
+            numerator_eq14 > 0.0,
+            self.bulk_thawed_heat_capacity,
+            self.bulk_frozen_heat_capacity
+        )
+
+        self.permafrost_temperature = numerator_eq14 / self.soil_conductivity
+
+    def update_active_layer(self, t: int):
+
+        self.latent_heat = self.constants['latent_heat'] * 1e3 * self.soil_water_content[t,:,:]
+        
+        # Romanovsky et al. (1997), eq. (4)
+        self.permafrost_amplitude = (
+            (self.ground_surface_amplitude - np.abs(self.permafrost_temperature)) /
+            np.log(
+                (self.ground_surface_amplitude + self.latent_heat / (2 * self.soil_heat_capacity)) /
+                (np.abs(self.permafrost_temperature) + self.latent_heat / (2 * self.soil_heat_capacity))
+            ) -
+            self.latent_heat / (2 * self.soil_heat_capacity)
+        )
+
+        # Romanovsky et al. (1997), eq. (5)
+        self.critical_depth = (
+            2 * (self.ground_surface_amplitude - np.abs(self.permafrost_temperature)) *
+            np.sqrt(
+                (self.soil_conductivity * self.soil_heat_capacity * self.constants['sec_per_a']) / np.pi
+            ) /
+            (2 * self.permafrost_amplitude * self.soil_heat_capacity + self.latent_heat)
+        )
+
+        # Romanovsky et al. (1997), eq. (3)
+        self.active_layer_thickness = (
+            2 * (self.ground_surface_amplitude - np.abs(self.permafrost_temperature)) *
+            np.sqrt(self.soil_conductivity * self.soil_heat_capacity * self.constants['sec_per_a'] / np.pi) +
+            (2 * self.permafrost_amplitude * self.soil_heat_capacity * self.critical_depth + 
+            self.latent_heat * self.critical_depth) *
+            self.latent_heat * np.sqrt(
+                (self.soil_conductivity * self.constants['sec_per_a']) /
+                (self.soil_heat_capacity * np.pi)
+            ) /
+            (
+                2 * self.permafrost_amplitude * self.soil_heat_capacity * self.critical_depth +
+                self.latent_heat * self.critical_depth +
+                (2 * self.permafrost_amplitude * self.soil_heat_capacity + self.latent_heat) *
+                np.sqrt(
+                    (self.soil_conductivity * self.constants['sec_per_a']) /
+                    (self.soil_heat_capacity * np.pi)
+                )
+            )
+        ) / (2 * self.permafrost_amplitude * self.soil_heat_capacity + self.latent_heat) 
 
     def run_one_step(self):
         pass

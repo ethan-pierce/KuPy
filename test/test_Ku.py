@@ -88,16 +88,32 @@ class TestUpdateSurfaceTemperature:
         assert_approx_equal(Kutest.summer_vegetation_effect[0, 0], 0.4896, significant=4)
         assert_approx_equal(Kutest.vegetation_damping[0, 0], 0.3756, significant=4)
         assert_approx_equal(Kutest.vegetation_insulation[0, 0], 0.2391, significant=4)
+        assert_approx_equal(Kutest.ground_surface_temperature[0, 0], -1.058, significant=4)
+        assert_approx_equal(Kutest.ground_surface_amplitude[0, 0], 15.10, significant=4)
 
 class TestUpdatePermafrostTemperature:
 
     def test_update_permafrost_temperature(self, Kutest):
+        Kutest.update_soil_heat_capacity(0)
+        Kutest.update_soil_thermal_conductivity(0)
         Kutest.update_snow_thermal_properties(0)
         Kutest.update_season_durations(0)
         Kutest.update_ground_surface_temperature(0)
         Kutest.update_permafrost_temperature(0)
 
-        assert_approx_equal(Kutest.permafrost_temperature[0, 0], 0.0, significant=4)
+        assert_approx_equal(Kutest.permafrost_temperature[0, 0], -3.006, significant=4)
 
+class TestUpdateActiveLayer:
 
-        
+    def test_update_active_layer(self, Kutest):
+        Kutest.update_soil_heat_capacity(0)
+        Kutest.update_soil_thermal_conductivity(0)
+        Kutest.update_snow_thermal_properties(0)
+        Kutest.update_season_durations(0)
+        Kutest.update_ground_surface_temperature(0)
+        Kutest.update_permafrost_temperature(0)
+        Kutest.update_active_layer(0)
+
+        assert_approx_equal(Kutest.permafrost_amplitude[0, 0], 8.783, significant=4)
+        assert_approx_equal(Kutest.critical_depth[0, 0], 0.7504, significant=4)
+        assert_approx_equal(Kutest.active_layer_thickness[0, 0], 1.226, significant=4)
