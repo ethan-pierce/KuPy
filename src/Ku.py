@@ -29,7 +29,7 @@ class Ku_model:
         self.length_of_cold_season = None 
         self.length_of_warm_season = None 
 
-        # update_permafrost_temperature()
+        # update_ground_surface_temperature()
         self.snow_insulation = None
         self.snow_damping = None
         self.temperature_at_vegetation = None
@@ -39,7 +39,9 @@ class Ku_model:
         self.vegetation_insulation = None
         self.vegetation_damping = None
         self.ground_surface_temperature = None
-        self.ground_surface_amplitude = None 
+        self.ground_surface_amplitude = None
+
+        # update_permafrost_temperature()
         self.permafrost_temperature = None
 
 ##############
@@ -168,7 +170,7 @@ class Ku_model:
         )
         self.length_of_warm_season = self.constants['sec_per_a'] - self.length_of_cold_season
 
-    def update_permafrost_temperature(self, t: int):
+    def update_ground_surface_temperature(self, t: int):
 
         # Anisimov et al. (1997), eq. (7)
         inner_eq7 = np.exp(
@@ -197,7 +199,22 @@ class Ku_model:
             )
         )
         self.summer_vegetation_effect = (self.amplitude_at_vegetation + self.temperature_at_vegetation) * inner_eq11
-        
+
+        self.vegetation_insulation = (
+            self.winter_vegetation_effect * self.length_of_cold_season +
+            self.summer_vegetation_effect * self.length_of_warm_season
+        ) / self.constants['sec_per_a'] * (2.0 / np.pi)
+
+        self.vegetation_damping = (
+            self.winter_vegetation_effect * self.length_of_cold_season +
+            self.summer_vegetation_effect * self.length_of_warm_season
+        ) / self.constants['sec_per_a']
+
+        self.ground_surface_temperature = self.temperature_at_vegetation + self.vegetation_insulation
+        self.ground_surface_amplitude = self.amplitude_at_vegetation - self.vegetation_damping
+
+    def update_permafrost_temperature(self, t: int):
+        pass
 
     def update_active_layer(self):
         pass

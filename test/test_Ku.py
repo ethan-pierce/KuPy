@@ -61,7 +61,7 @@ class TestUpdatePhysicalProperties:
 
         assert_approx_equal(Kutest.snow_thermal_conductivity[0, 0], 0.08182, significant=4)
 
-class TestUpdatePermafrostTemperature:
+class TestUpdateSurfaceTemperature:
 
     def test_update_season_durations(self, Kutest):
         Kutest.update_season_durations(0)
@@ -72,7 +72,7 @@ class TestUpdatePermafrostTemperature:
     def test_update_snow_and_veg_insulation(self, Kutest):
         Kutest.update_snow_thermal_properties(0)
         Kutest.update_season_durations(0)
-        Kutest.update_permafrost_temperature(0)
+        Kutest.update_ground_surface_temperature(0)
 
         assert_approx_equal(Kutest.snow_insulation[0, 0], 5.610, significant=4)
         assert_approx_equal(Kutest.snow_damping[0, 0], 3.571, significant=4)
@@ -82,11 +82,22 @@ class TestUpdatePermafrostTemperature:
     def test_update_vegetation_effects(self, Kutest):
         Kutest.update_snow_thermal_properties(0)
         Kutest.update_season_durations(0)
+        Kutest.update_ground_surface_temperature(0)
+
+        assert_approx_equal(Kutest.winter_vegetation_effect[0, 0], 0.3051, significant=4)
+        assert_approx_equal(Kutest.summer_vegetation_effect[0, 0], 0.4896, significant=4)
+        assert_approx_equal(Kutest.vegetation_damping[0, 0], 0.3756, significant=4)
+        assert_approx_equal(Kutest.vegetation_insulation[0, 0], 0.2391, significant=4)
+
+class TestUpdatePermafrostTemperature:
+
+    def test_update_permafrost_temperature(self, Kutest):
+        Kutest.update_snow_thermal_properties(0)
+        Kutest.update_season_durations(0)
+        Kutest.update_ground_surface_temperature(0)
         Kutest.update_permafrost_temperature(0)
 
-        print(Kutest.thawed_vegetation_height[0])
-        print(Kutest.frozen_vegetation_height[0])
+        assert_approx_equal(Kutest.permafrost_temperature[0, 0], 0.0, significant=4)
 
-        assert_approx_equal(Kutest.winter_vegetation_effect[0, 0], 0.0, significant=4)
-        assert_approx_equal(Kutest.summer_vegetation_effect[0, 0], 0.0, significant=4)
 
+        
