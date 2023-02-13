@@ -320,5 +320,18 @@ class Ku_model:
 # Finalize #
 ############
 
-    def write_output(self):
-        pass
+    def write_output(self, path, vars_to_write):
+        arrays = {}
+
+        for var in vars_to_write:
+            data = self.results[var]
+            dataarray = xr.DataArray(
+                data = data,
+                dims = ['time', 'x', 'y']
+            )
+            arrays[var] = dataarray
+
+        dataset = xr.Dataset(arrays)
+
+        dataset.to_netcdf(path, mode = 'w', format = 'NETCDF4')
+            

@@ -1,6 +1,7 @@
 import pytest
+import os
 from numpy.testing import assert_approx_equal, assert_array_equal
-
+from netCDF4 import Dataset
 from src.Ku import Ku_model
 
 def test_always_passes():
@@ -147,6 +148,18 @@ class TestWriteOutput:
         assert_array_equal(Kutest.permafrost_temperature, Kutest.results['permafrost_temperature'][0])
         assert_array_equal(Kutest.active_layer_thickness, Kutest.results['active_layer_thickness'][0])
 
-    def test_write_output(self, Kutest):
+
+    @pytest.fixture
+    def output_file(self, tmp_path):
+        target_output = os.path.join(tmp_path, 'output.nc')
+        return target_output
+
+    def test_write_output(self, Kutest, output_file):
+        Kutest.construct_results(['permafrost_temperature'])
         Kutest.run_one_step(0)
-        Kutest.write_output()
+        Kutest.write_output(output_file, ['permafrost_temperature'])
+
+        data = Dataset(output_file)
+
+        assert 'permafrost_temperature' in data.variables.keys()
+        assert data['permafrost_temperature'].shape == (100, 100, 100)
