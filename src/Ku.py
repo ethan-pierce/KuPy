@@ -12,6 +12,7 @@ class Ku_model:
         self.grid_shape = [0, 0]
         self.input_files = {}
         self.constants = {}
+        self.results = {}
 
         # update_soil_heat_capacity()
         self.bulk_thawed_heat_capacity = None
@@ -116,6 +117,10 @@ class Ku_model:
                                 str((self.number_of_years, self.grid_shape[0], self.grid_shape[1])))
 
         return data
+
+    def construct_results(self, vars_to_save, template = 'air_temperature'):
+        self.results = {var: np.empty([self.number_of_years, self.grid_shape[0], self.grid_shape[1]]) 
+                        for var in vars_to_save}
 
 ##########
 # Update #
@@ -295,11 +300,21 @@ class Ku_model:
             )
         ) / (2 * self.permafrost_amplitude * self.soil_heat_capacity + self.latent_heat) 
 
-    def run_one_step(self):
-        pass
+    def run_one_step(self, t: int):
+        self.update_soil_heat_capacity(t)
+        self.update_soil_thermal_conductivity(t)
+        self.update_snow_thermal_properties(t)
+        self.update_season_durations(t)
+        self.update_ground_surface_temperature(t)
+        self.update_permafrost_temperature(t)
+        self.update_active_layer(t)
+        
+        for var in self.results.keys():
+            self.results[var][t] = getattr(self, var).values[:,:]
 
     def run_all_steps(self):
-        pass
+        for t in range(self.number_of_years):
+            self.run_one_step(t)
 
 ############
 # Finalize #

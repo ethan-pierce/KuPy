@@ -1,5 +1,5 @@
 import pytest
-from numpy.testing import assert_approx_equal
+from numpy.testing import assert_approx_equal, assert_array_equal
 
 from src.Ku import Ku_model
 
@@ -117,3 +117,36 @@ class TestUpdateActiveLayer:
         assert_approx_equal(Kutest.permafrost_amplitude[0, 0], 8.783, significant=4)
         assert_approx_equal(Kutest.critical_depth[0, 0], 0.7504, significant=4)
         assert_approx_equal(Kutest.active_layer_thickness[0, 0], 1.226, significant=4)
+
+class TestRun:
+
+    def test_run_one_step(self, Kutest):
+        Kutest.run_one_step(0)
+
+        assert_approx_equal(Kutest.permafrost_amplitude[0, 0], 8.783, significant=4)
+        assert_approx_equal(Kutest.critical_depth[0, 0], 0.7504, significant=4)
+        assert_approx_equal(Kutest.active_layer_thickness[0, 0], 1.226, significant=4)
+
+    def test_run_all_steps(self, Kutest):
+        Kutest.number_of_years = 10
+        Kutest.run_all_steps()
+
+        assert_approx_equal(Kutest.permafrost_amplitude[0, 0], 8.995, significant=4)
+        assert_approx_equal(Kutest.critical_depth[0, 0], 0.7525, significant=4)
+        assert_approx_equal(Kutest.active_layer_thickness[0, 0], 1.224, significant=4)
+
+class TestWriteOutput:
+
+    def test_construct_results(self, Kutest):
+        Kutest.construct_results(['permafrost_temperature', 'active_layer_thickness'])
+        assert 'permafrost_temperature' in Kutest.results
+        assert 'active_layer_thickness' in Kutest.results
+
+        Kutest.run_one_step(0)
+
+        assert_array_equal(Kutest.permafrost_temperature, Kutest.results['permafrost_temperature'][0])
+        assert_array_equal(Kutest.active_layer_thickness, Kutest.results['active_layer_thickness'][0])
+
+    def test_write_output(self, Kutest):
+        Kutest.run_one_step(0)
+        Kutest.write_output()
