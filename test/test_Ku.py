@@ -139,7 +139,7 @@ class TestRun:
 class TestWriteOutput:
 
     def test_construct_results(self, Kutest):
-        Kutest.construct_results(['permafrost_temperature', 'active_layer_thickness'])
+        Kutest.construct_results()
         assert 'permafrost_temperature' in Kutest.results
         assert 'active_layer_thickness' in Kutest.results
 
@@ -155,7 +155,7 @@ class TestWriteOutput:
         return target_output
 
     def test_write_output(self, Kutest, output_file):
-        Kutest.construct_results(['permafrost_temperature'])
+        Kutest.construct_results(vars_to_save=['permafrost_temperature'])
         Kutest.run_one_step(0)
         Kutest.write_output(output_file, ['permafrost_temperature'])
 

@@ -1,10 +1,83 @@
+"""Kudryavtsev permafrost model, adapted from Anisimov et al. (1997).
+
+Input variables:
+    air_temperature: Mean annual air temperature (degrees Celsius)
+    temperature_amplitude: Amplitude of annual air temperature (degrees Celsius)
+    snow_thickness: Mean thickness of winter snow cover (meters)
+    snow_density: Mean density of winter snowpack (kilograms per cubic meter)
+    soil_water_content: Mean volumetric water content (cubic meters of water per cubic meter of soil)
+    frozen_vegetation_height: Mean height of vegetation during the frozen season(s) (meters)
+    thawed_vegetation_height: Mean height of vegetation during the thawed season(s) (meters)
+    frozen_vegetation_diffusivity: Mean thermal diffusivity of vegetation during the frozen season(s) (square meters per second)
+    thawed_vegetation_diffusivity: Mean thermal diffusivity of vegetation during the thawed season(s) (square meters per second)
+
+Output variables:
+    permafrost_temperature: Mean annual temperature at the top of the permafrost layer (degrees Celsius)
+    active_layer_thickness: Mean annual active layer thickness (meters)
+
+Authors: Kang Wang, Elchin Jafarov, Ethan Pierce, Irina Overeem
+
+References:
+Anisimov, O. A., Shiklomanov, N. I., & Nelson, F. E. (1997).
+    Global warming and active-layer thickness: results from transient general circulation models.
+    Global and Planetary Change, 15(3), 61-77.
+Romanovsky, V. E., & Osterkamp, T. E. (1997).
+    Thawing of the active layer on the coastal plain of the Alaskan Arctic.
+    Permafrost and Periglacial processes, 8(1), 1-22.
+Sazonova, T. S., & Romanovsky, V. E. (2003).
+    A model for regional‐scale estimation of temporal and spatial variability of active layer thickness and mean annual ground temperatures.
+    Permafrost and Periglacial Processes, 14(2), 125-139.
+Sturm, M., Holmgren, J., König, M., & Morris, K. (1997).
+    The thermal conductivity of seasonal snow. Journal of Glaciology, 43(143), 26-41.
+Ling, F., & Zhang, T. (2004).
+    A numerical model for surface energy balance and thermal regime of the active layer and permafrost containing unfrozen water.
+    Cold Regions Science and Technology, 38(1), 1-15.
+
+*The MIT License (MIT)*
+Copyright (c) 2016 permamodel
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*
+"""
+
 import numpy as np
 import xarray as xr
 import tomli
 
 class Ku_model:
+    """The Kudryavtsev permafrost model.
+
+    Typical usage example:
+        Ku = Ku_model()
+        Ku.read_config(path_to_config_file)
+        Ku.read_input_files()
+        Ku.construct_results(vars_to_save = ['active_layer_thickness'])
+        Ku.run_all_steps()
+        Ku.write_output(path_to_output_file, ['active_layer_thickness'])
+
+    """
 
     def __init__(self):
+        """Initialize the model with default (blank) values.
+
+        Args:
+            None
+        """
+        
+        # Used by read_config()
         self.experiment = ""
         self.inputs_dir = ""
         self.outputs_dir = ""
@@ -14,23 +87,23 @@ class Ku_model:
         self.constants = {}
         self.results = {}
 
-        # update_soil_heat_capacity()
+        # Used by update_soil_heat_capacity()
         self.bulk_thawed_heat_capacity = None
         self.bulk_frozen_heat_capacity = None
 
-        # update_soil_thermal_conductivity()
+        # Used by update_soil_thermal_conductivity()
         self.bulk_thawed_conductivity = None
         self.bulk_frozen_conductivity = None
-    
-        # update_snow_thermal_properties()
+
+        # Used by update_snow_thermal_properties()
         self.snow_thermal_conductivity = None
         self.snow_thermal_diffusivity = None
 
-        # update_season_durations()
+        # Used by update_season_durations()
         self.length_of_cold_season = None 
         self.length_of_warm_season = None 
 
-        # update_ground_surface_temperature()
+        # Used by update_ground_surface_temperature()
         self.snow_insulation = None
         self.snow_damping = None
         self.temperature_at_vegetation = None
@@ -42,12 +115,12 @@ class Ku_model:
         self.ground_surface_temperature = None
         self.ground_surface_amplitude = None
 
-        # update_permafrost_temperature()
+        # Used by update_permafrost_temperature()
         self.permafrost_temperature = None
         self.soil_conductivity = None
         self.soil_heat_capacity = None 
 
-        # update_active_layer()
+        # Used by update_active_layer()
         self.active_layer_thickness = None 
         self.critical_depth = None
         self.permafrost_amplitude = None 
@@ -57,24 +130,43 @@ class Ku_model:
 ##############
 
     def read_config(self, config_file: str):
+        """Read the configuration file and populate the indicated attributes.
+
+        Args:
+            config_file: str
+                Path to the configuration file.
+        """
+
+        # Open the configuration file with a TOML parser
         with open(config_file, "rb") as file:
             config = tomli.load(file)
 
+        # Variables to help when organizing multiple model runs
         self.experiment = config['experiment']
         self.inputs_dir = config['directories']['inputs_dir']
         self.outputs_dir = config['directories']['outputs_dir']
 
+        # The domain for this model instance
         self.number_of_years = config['domain']['number_of_years']
         self.grid_shape = config['domain']['grid_shape']
 
+        # Paths to the input data files
         self.input_files = {var: ncfile for var, ncfile in config['files'].items()}
+
+        # Soil properties
         self.soils = {soil: props for soil, props in config['soils'].items()}
+
+        # Physical constants
         self.constants = {var: val for var, val in config['constants'].items()}
 
     def read_input_files(self):
+        """Read input data files and store fields as instance variables."""
+
+        # Raise an error if there are no input files to read.
         if len(self.input_files) == 0:
             raise ValueError("No input files to read: did you call read_config() first?")
 
+        # Read input data from each file.
         for key, file in self.input_files.items():
             var = key.replace('_file', '')
             data = xr.open_dataarray(self.inputs_dir + file)
@@ -83,6 +175,7 @@ class Ku_model:
 
             setattr(self, var, data)
 
+        # Read soil properties, if not defined directly in the config file.
         for soil, props in self.soils.items():
             if len(props['nc_file']) > 0:
                 data = xr.open_dataarray(prop['nc_file'])
@@ -95,9 +188,15 @@ class Ku_model:
             self.soils[soil]['fraction'] = data
 
     def broadcast(self, data: xr.DataArray) -> xr.DataArray:
+        """Broadcast an xarray DataArray to a shape that matches the model's domain.
+
+        Returns:
+            data:
+                The input DataArray, with new dimensions of (x, y, time).
+        """
         if data.shape == (self.number_of_years, self.grid_shape[0], self.grid_shape[1]):
             pass
-
+        
         elif data.shape == (self.grid_shape[0], self.grid_shape[1]):
             data = data.expand_dims({"time": self.number_of_years}, axis = 0)
 
@@ -118,7 +217,18 @@ class Ku_model:
 
         return data
 
-    def construct_results(self, vars_to_save, template = 'air_temperature'):
+    def construct_results(self, 
+                          vars_to_save: list = ['permafrost_temperature', 'active_layer_thickness'], 
+                          template: str = 'air_temperature'):
+        """Construct a dictionary of empty arrays to store the model results.
+
+        Args:
+            vars_to_save: list
+                A list of variable names to write out at every time step.
+            template: str
+                The name of a variable to use as the template for empty arrays.
+        """
+
         self.results = {var: np.empty([self.number_of_years, self.grid_shape[0], self.grid_shape[1]]) 
                         for var in vars_to_save}
 
@@ -127,9 +237,13 @@ class Ku_model:
 ##########
 
     def update_soil_heat_capacity(self, t: int):
+        """Calculate the heat capacity of the soil in each column."""
+
         total_soil_fraction = np.add.reduce([props['fraction'][t,:,:] for soil, props in self.soils.items()])
+
         weighted_heat_capacity = np.add.reduce([props['heat_capacity'] * props['fraction'][t,:,:] / total_soil_fraction
                                                 for soil, props in self.soils.items()])
+
         weighted_bulk_density = np.add.reduce([props['bulk_density'] * props['fraction'][t,:,:] / total_soil_fraction
                                                for soil, props in self.soils.items()])
         
@@ -141,6 +255,8 @@ class Ku_model:
                                           2025.0 * self.soil_water_content[t,:,:])
 
     def update_soil_thermal_conductivity(self, t: int):
+        """Calculate the thermal conductivity of the soil in each column."""
+
         total_soil_fraction = np.add.reduce([props['fraction'][t,:,:] for soil, props in self.soils.items()])
         
         dry_thawed_conductivity = np.multiply.reduce(
@@ -164,6 +280,7 @@ class Ku_model:
         )
 
     def update_snow_thermal_properties(self, t: int):
+        """Calculate the thermal conductivity and diffusivity of the snow layer."""
 
         # Sturm et al. (1997), eq. (4)
         self.snow_thermal_conductivity = (
@@ -177,12 +294,15 @@ class Ku_model:
         )
 
     def update_season_durations(self, t: int):
+        """Estimate the duration of the frozen and thawed seasons."""
+
         self.length_of_cold_season = self.constants['sec_per_a'] * (
             0.5 - (1.0 / np.pi) * np.arcsin(self.air_temperature[t,:,:] / self.temperature_amplitude[t,:,:])
         )
         self.length_of_warm_season = self.constants['sec_per_a'] - self.length_of_cold_season
 
     def update_ground_surface_temperature(self, t: int):
+        """Calculate the temperature at the base of the snow and vegetation layers."""
 
         # Anisimov et al. (1997), eq. (7)
         inner_eq7 = np.exp(
@@ -226,6 +346,7 @@ class Ku_model:
         self.ground_surface_amplitude = self.amplitude_at_vegetation - self.vegetation_damping
 
     def update_permafrost_temperature(self, t: int):
+        """Calculate the temperature at the top of the permafrost layer."""
         
         # Anisimov et al. (1997), eq. (14)
         first_term_eq14 = (
@@ -257,6 +378,7 @@ class Ku_model:
         self.permafrost_temperature = numerator_eq14 / self.soil_conductivity
 
     def update_active_layer(self, t: int):
+        """Calculate the active layer thickness."""
 
         self.latent_heat = self.constants['latent_heat'] * 1e3 * self.soil_water_content[t,:,:]
         
@@ -301,6 +423,13 @@ class Ku_model:
         ) / (2 * self.permafrost_amplitude * self.soil_heat_capacity + self.latent_heat) 
 
     def run_one_step(self, t: int):
+        """Run one step of the model.
+
+        Args:
+            t: int
+                The year to run, indicated by its index. All datasets have shape (years, x, y).
+        """
+
         self.update_soil_heat_capacity(t)
         self.update_soil_thermal_conductivity(t)
         self.update_snow_thermal_properties(t)
@@ -309,10 +438,13 @@ class Ku_model:
         self.update_permafrost_temperature(t)
         self.update_active_layer(t)
         
+        # Save the output fields to a results table.
         for var in self.results.keys():
             self.results[var][t] = getattr(self, var).values[:,:]
 
     def run_all_steps(self):
+        """Run all years of the simulation."""
+
         for t in range(self.number_of_years):
             self.run_one_step(t)
 
@@ -320,7 +452,16 @@ class Ku_model:
 # Finalize #
 ############
 
-    def write_output(self, path, vars_to_write):
+    def write_output(self, path: str, vars_to_write: list):
+        """Write out a netCDF file with all indicated output variables.
+        
+        Args:
+            path: str
+                The file path where the output file will be written.
+            vars_to_write: list
+                A list of output variables that should be included in the netCDF file.
+        """
+        
         arrays = {}
 
         for var in vars_to_write:
