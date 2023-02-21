@@ -87,6 +87,17 @@ class Ku_model:
         self.constants = {}
         self.results = {}
 
+        # Used by read_input_files()
+        self.air_temperature = None
+        self.temperature_amplitude = None
+        self.snow_thickness = None
+        self.snow_density = None 
+        self.soil_water_content = None
+        self.frozen_vegetation_height = None
+        self.thawed_vegetation_height = None
+        self.frozen_vegetation_diffusivity = None 
+        self.thawed_vegetation_diffusivity = None 
+
         # Used by update_soil_heat_capacity()
         self.bulk_thawed_heat_capacity = None
         self.bulk_frozen_heat_capacity = None
