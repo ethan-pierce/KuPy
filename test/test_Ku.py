@@ -36,6 +36,8 @@ class TestReadInputs:
         assert Ku.snow_thickness.shape == (100, 100, 100)
         assert Ku.soils['sand']['fraction'].mean() == 0.25
 
+        print(Ku.air_temperature)
+
 @pytest.fixture
 def Kutest():
     K = Ku_model()

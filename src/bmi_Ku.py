@@ -119,6 +119,7 @@ class BmiKuModel:
 
         self._start_time = 0
         self._end_time = self._model.number_of_years
+        self._grid_shape = (self._model.number_of_years, self._model.grid_shape[0], self._model.grid_shape[1])
 
     def update(self):
         """Run the model for the current time step."""
@@ -168,7 +169,7 @@ class BmiKuModel:
 
     def get_var_type(self, var: str) -> str:
         """Return the data type of a variable."""
-        return str(self.get_value(var).dtype)
+        return str(self.get_value_ptr(var).dtype)
 
     def get_var_units(self, var: str) -> str:
         """Return the units of a variable."""
@@ -176,7 +177,7 @@ class BmiKuModel:
 
     def get_var_nbytes(self, var: str) -> int:
         """Return the size of a variable in bytes."""
-        return self.get_value(var).nbytes
+        return self.get_value_ptr(var).nbytes
 
     def get_var_itemsize(self, var: str) -> int:
         """Return the size of one element of a variable in bytes."""
@@ -206,8 +207,104 @@ class BmiKuModel:
         """Return the model's time step."""
         return 1
 
-    
+    def get_value_ptr(self, var: str) -> np.ndarray:
+        """Returns a reference to the values of a variable."""
+        return getattr(self._model, var).values[:]
 
+    def get_value(self, var: str, dest: np.ndarray) -> np.ndarray:
+        """Returns an array with a copy of the values of a variable."""
+        dest[:] = np.ravel(self.get_value_ptr(var), order = 'C')
+        return dest
+
+    def get_value_at_indices(self, var: str, dest: np.ndarray, indices: np.ndarray) -> np.ndarray:
+        """Returns an array with a copy of the values of a variable at the given indices."""
+        dest[:] = np.ravel(self.get_value_ptr(var), order = 'C').take(indices)
+        return dest
+
+    def set_value(self, var: str, values: np.ndarray):
+        """Set the value of a variable."""
+        vals = np.reshape(values, self._grid_shape)
+        getattr(self._model, var).values[:] = vals
     
+    def set_value_at_indices(self, var: str, indices: np.ndarray, values: np.ndarray):
+        """Set the value of a variable at the given indices."""
+        current_values = getattr(self._model, var).values[:]
+        flat_values = np.ravel(current_values, order = 'C')
+        flat_values[indices] = values
+
+    def get_grid_type(self, grid: int) -> str:
+        """Given a grid ID, return the type of grid."""
+        return self._grid_type[grid]
+
+    def get_grid_rank(self, grid: int) -> int:
+        """Given a grid ID, return the number of dimensions of the grid."""
+        return len(self._grid_shape)
+
+    def get_grid_size(self, grid: int) -> int:
+        """Given a grid ID, return the number of elements of the grid."""
+        return int(np.prod(self._grid_shape))
+
+    # TODO assign all following fns to arrays
+    def get_grid_shape(self, grid: int, shape: np.ndarray) -> np.ndarray:
+        """Given a grid ID, return the shape of the grid."""
+        shape[:] = self._grid_shape
+        return shape
+
+    def get_grid_spacing(self, grid: int, spacing: np.ndarray) -> np.ndarray:
+        """Given a grid ID, return the distance between grid elements in each direction."""
+        var = self._grids[grid]
+
+        dims = getattr(self._model, var).dims
+        coords = [getattr(self._model, var)[dim] for dim in dims]
+        diffs = [np.diff(array)[0] for array in coords]
         
+        spacing[:] = diffs
+        return spacing
 
+    def get_grid_origin(self, grid: int, origin: np.ndarray) -> np.ndarray:
+        """Given a grid ID, return the [y, x] coordinates of the lower-left corner."""
+        var = self._grids[grid]
+
+        ydim = getattr(self._model, var).dims[1]
+        xdim = getattr(self._model, var).dims[2]
+
+        y0 = getattr(self._model, var)[ydim][0, 0]
+        x0 = getattr(self._model, var)[xdim][0, 0]
+
+        origin[:] = [y0, x0]
+        return origin
+    
+    def get_grid_x(self, grid: int, xs: np.ndarray) -> np.ndarray:
+        """Given a grid ID, return an array of x-coordinates."""
+        var = self._grids[grid]
+        xs[:] = np.ravel(getattr(self._model, var).dims[2])
+        return xs
+
+    def get_grid_y(self, grid: int, ys: np.ndarray) -> np.ndarray:
+        """Given a grid ID, return an array of y-coordinates."""
+        var = self._grids[grid]
+        ys[:] = np.ravel(getattr(self._model, var).dims[1])
+        return ys
+    
+    def get_grid_z(self, grid: int, zs: np.ndarray):
+        raise NotImplementedError("get_grid_z() not implemented.")
+
+    def get_grid_node_count(self, grid: int):
+        """Given a grid ID, return the number of nodes."""
+        return self.get_grid_size(grid)
+
+    def get_grid_face_count(self, grid: int):
+        raise NotImplementedError("get_grid_face_count() not implemented.")
+
+    def get_grid_edge_nodes(self, grid: int, edge_nodes: np.ndarray):
+        raise NotImplementedError("get_grid_edge_nodes() not implemented.")
+
+    def get_grid_face_edges(self, grid: int, face_edges: np.ndarray):
+        raise NotImplementedError("get_grid_face_edges() not implemented.")
+
+    def get_grid_face_nodes(self, grid: int, face_nodes: np.ndarray):
+        raise NotImplementedError("get_grid_face_nodes() not implemented.")
+
+    def get_grid_nodes_per_face(self, grid: int, nodes_per_face: np.ndarray):
+        raise NotImplementedError("get_grid_nodes_per_face() not implemented.")
+        

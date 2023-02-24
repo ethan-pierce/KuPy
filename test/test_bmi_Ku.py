@@ -1,6 +1,6 @@
 import pytest
 from src.bmi_Ku import BmiKuModel
-from numpy.testing import assert_approx_equal
+from numpy.testing import assert_approx_equal, assert_array_equal
 
 def test_always_passes():
     assert True
@@ -46,3 +46,7 @@ def test_bmi_update_until(Bmi):
 
     assert_approx_equal(Bmi._model.permafrost_temperature[0, 0], -1.7699, significant=4)
     assert_approx_equal(Bmi._model.active_layer_thickness[0, 0], 1.318, significant=4)
+
+def test_get_grid_spacing(Bmi):
+    spacing = Bmi.get_grid_spacing(Bmi.get_var_grid('snow_thickness'))
+    assert_array_equal(spacing, [1, 1, 1])
